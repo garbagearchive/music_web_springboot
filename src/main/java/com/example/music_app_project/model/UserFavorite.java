@@ -73,7 +73,7 @@ public class UserFavorite {
 
     }
 
-    public void setFavoritedAt() {
+    public void setFavoritedAt(LocalDateTime favoritedAt) {
         this.favoritedAt = favoritedAt;
     }
 }

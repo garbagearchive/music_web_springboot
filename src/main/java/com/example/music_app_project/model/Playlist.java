@@ -58,7 +58,7 @@ public class Playlist {
         return createdAt;
     }
 
-    public void setCreateAt() {
+    public void setCreateAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 }

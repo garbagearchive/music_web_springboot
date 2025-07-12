@@ -70,7 +70,7 @@ public class Lyric {
         return createdAt;
     }
 
-    public void setCreateAt(LocalDateTime createAt) {
+    public void setCreateAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 }

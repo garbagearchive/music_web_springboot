@@ -53,7 +53,7 @@ public class SyncedLyric {
         return line;
     }
 
-    public void setLine() {
+    public void setLine(String line) {
         this.line = line;
     }
 

@@ -72,7 +72,7 @@ public class PlaylistSong {
         return addedAt;
     }
 
-    public void setAddedAt() {
+    public void setAddedAt(LocalDateTime addedAt) {
         this.addedAt = addedAt;
     }
 }

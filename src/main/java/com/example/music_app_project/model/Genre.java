@@ -14,22 +14,19 @@ public class Genre {
     private String name;
 
     // Getters and setters
-    // GerneID
-    public Integer getGerneID() {
+    public Integer getGenreID() {
         return genreID;
     }
 
-    public void setGerneID(Integer gerneID) {
-        this.genreID = gerneID;
+    public void setGenreID(Integer genreID) {
+        this.genreID = genreID;
     }
 
-    // GerneName
-    public String getGerneName() {
+    public String getGenreName() {
         return name;
     }
 
-    public void setGerneName(String name) {
+    public void setGenreName(String name) {
         this.name = name;
     }
-
 }
