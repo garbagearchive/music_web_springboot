@@ -1,41 +1,59 @@
 package com.example.music_app_project.model;
 
-import jakarta.persistence.*;
-import java.time.*;
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "Users")
 public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer userID;
+    private Integer id; // Đổi từ userID thành id để khớp với schema bạn cung cấp
 
     @Column(nullable = false, length = 100, unique = true)
     private String username;
-    @Column(nullable = false, length = 100, unique = true)
+
+    @Column(nullable = false, length = 255, unique = true)
     private String email;
 
-    @Column(nullable = false, length = 255)
-    private String passwordHash;
+    // Thay đổi từ passwordHash thành password để khớp với Controller và DB schema
+    @Column(name = "password", nullable = false, length = 255)
+    private String password;
 
-    private LocalDate createAt;
+    // Đảm bảo tên cột trong DB là CreatedAt, và tên trường là createdAt
+    @Column(name = "CreatedAt")
+    private LocalDateTime createdAt;
 
-    // set Date for CreateAt immediately:
-    @PrePersist
-    protected void onCreate() {
-        this.createAt = LocalDate.now();
+    // Constructor mặc định (cần thiết cho JPA)
+    public User() {
     }
 
-    // UserID
-    public Integer getUserID() {
-        return userID;
+    // Constructor cho việc đăng ký (phù hợp với AuthController)
+    public User(String username, String email, String password) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        // createdAt sẽ được set bởi @PrePersist hoặc bởi hàm gọi
     }
 
-    public void setUserID(Integer userID) {
-        this.userID = userID;
+    // --- Getters và Setters ---
+
+    public Integer getId() {
+        return id;
     }
 
-    // Username
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
     public String getUsername() {
         return username;
     }
@@ -44,7 +62,6 @@ public class User {
         this.username = username;
     }
 
-    // Email
     public String getEmail() {
         return email;
     }
@@ -53,21 +70,29 @@ public class User {
         this.email = email;
     }
 
-    // PasswordHash
-    public String getPasswordHash() {
-        return passwordHash;
+    // Getter và Setter cho trường password
+    public String getPassword() {
+        return password;
     }
 
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
+    public void setPassword(String password) {
+        this.password = password;
     }
 
-    // CreateAt
-    public LocalDate getCreateAt() {
-        return createAt;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
-    public void setCreateAt(LocalDate createAt) {
-        this.createAt = createAt;
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+        // Trả về thời gian hiện tại nếu không được set
+    }
+
+    // Phương thức này sẽ được gọi trước khi lưu đối tượng vào DB lần đầu
+    @PrePersist
+    protected void onCreated() {
+        if (this.createdAt == null) { // Chỉ set nếu chưa được set bởi constructor
+            this.createdAt = LocalDateTime.now();
+        }
     }
 }

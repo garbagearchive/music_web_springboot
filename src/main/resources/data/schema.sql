@@ -1,0 +1,106 @@
+-- Bảng USERS
+CREATE TABLE Users (
+    UserID INT AUTO_INCREMENT PRIMARY KEY,
+    Username VARCHAR(50) NOT NULL UNIQUE,
+    Email VARCHAR(100) NOT NULL UNIQUE,
+    PasswordHash VARCHAR(255) NOT NULL,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+);
+
+-- Bảng ARTISTS
+CREATE TABLE Artists (
+    ArtistID INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL,
+    Bio CLOB, -- Hoặc VARCHAR(MAX) tùy thuộc vào phiên bản H2 và mức độ dài dự kiến
+    Country VARCHAR(50),
+    BirthDate DATE
+);
+
+-- Bảng ALBUMS
+CREATE TABLE Albums (
+    AlbumID INT AUTO_INCREMENT PRIMARY KEY,
+    Title VARCHAR(100) NOT NULL,
+    ArtistID INT,
+    ReleaseDate DATE,
+    CoverImage VARCHAR(255),
+    FOREIGN KEY (ArtistID) REFERENCES Artists(ArtistID)
+);
+
+-- Bảng GENRES
+CREATE TABLE Genres (
+    GenreID INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- Bảng SONGS
+CREATE TABLE Songs (
+    SongID INT AUTO_INCREMENT PRIMARY KEY,
+    Title VARCHAR(100) NOT NULL,
+    ArtistID INT,
+    AlbumID INT,
+    GenreID INT,
+    Duration INT,
+    ReleaseDate DATE,
+    AudioFile VARCHAR(255),
+    FOREIGN KEY (ArtistID) REFERENCES Artists(ArtistID),
+    FOREIGN KEY (AlbumID) REFERENCES Albums(AlbumID),
+    FOREIGN KEY (GenreID) REFERENCES Genres(GenreID)
+);
+
+-- Bảng LYRICS
+CREATE TABLE Lyrics (
+    LyricID INT AUTO_INCREMENT PRIMARY KEY,
+    SongID INT NOT NULL, -- Thường là NOT NULL nếu Lyrics luôn thuộc về một Song
+    Content CLOB NOT NULL, -- Hoặc VARCHAR(MAX)
+    Language VARCHAR(50) DEFAULT 'English',
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    FOREIGN KEY (SongID) REFERENCES Songs(SongID) ON DELETE CASCADE
+);
+
+-- Bảng TIME-SYNCED LYRICS
+CREATE TABLE SyncedLyrics (
+    SyncedLyricID INT AUTO_INCREMENT PRIMARY KEY,
+    SongID INT NOT NULL,
+    TimeStampSeconds INT NOT NULL,
+    Line VARCHAR(500) NOT NULL,
+    FOREIGN KEY (SongID) REFERENCES Songs(SongID) ON DELETE CASCADE
+);
+
+-- Bảng PLAYLISTS
+CREATE TABLE Playlists (
+    PlaylistID INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL,
+    UserID INT,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+
+-- Bảng PLAYLIST SONGS
+CREATE TABLE PlaylistSongs (
+    PlaylistID INT NOT NULL,
+    SongID INT NOT NULL,
+    AddedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    PRIMARY KEY (PlaylistID, SongID),
+    FOREIGN KEY (PlaylistID) REFERENCES Playlists(PlaylistID),
+    FOREIGN KEY (SongID) REFERENCES Songs(SongID)
+);
+
+-- Bảng USER FAVORITE SONGS
+CREATE TABLE UserFavorites (
+    UserID INT NOT NULL,
+    SongID INT NOT NULL,
+    FavoritedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    PRIMARY KEY (UserID, SongID),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    FOREIGN KEY (SongID) REFERENCES Songs(SongID)
+);
+
+-- Bảng USER PLAY HISTORY
+CREATE TABLE PlayHistory (
+    HistoryID INT AUTO_INCREMENT PRIMARY KEY,
+    UserID INT,
+    SongID INT,
+    PlayedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    FOREIGN KEY (SongID) REFERENCES Songs(SongID)
+);

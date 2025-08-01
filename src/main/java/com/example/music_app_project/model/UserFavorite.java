@@ -1,55 +1,38 @@
 package com.example.music_app_project.model;
 
-import java.time.*;
+import java.time.LocalDateTime;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
+// Khóa phức hợp (composite key) cần được định nghĩa rõ ràng
 @Entity
 @Table(name = "UserFavorites")
 @IdClass(UserFavoriteId.class)
 public class UserFavorite {
 
     @Id
-    private Integer userID;
-
-    @Id
-    private Integer songID;
-
-    @ManyToOne
-    @JoinColumn(name = "userID", insertable = false, updatable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "UserID") // Tên cột trong CSDL vẫn là UserID
     private User user;
 
-    @ManyToOne
-    @JoinColumn(name = "songID", insertable = false, updatable = false)
+    @Id
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "SongID") // Tên cột trong CSDL vẫn là SongID
     private Song song;
 
+    @Column(name = "FavoritedAt")
     private LocalDateTime favoritedAt;
 
-    @PrePersist
-    protected void onCreate() {
-        this.favoritedAt = LocalDateTime.now();
-    }
+    // Constructors, Getters, and Setters
+    public UserFavorite() {}
 
-    // Getters and Setters
-    // userID
-    public Integer getUserID() {
-        return userID;
-    }
-
-    public void setUserID(Integer userID) {
-        this.userID = userID;
-    }
-
-    // songID
-    public Integer getSongID() {
-        return songID;
-    }
-
-    public void setSongID(Integer songID) {
-        this.songID = songID;
-    }
-
-    // user
     public User getUser() {
         return user;
     }
@@ -58,7 +41,6 @@ public class UserFavorite {
         this.user = user;
     }
 
-    // song
     public Song getSong() {
         return song;
     }
@@ -67,10 +49,8 @@ public class UserFavorite {
         this.song = song;
     }
 
-    // favoritedAt
     public LocalDateTime getFavoritedAt() {
         return favoritedAt;
-
     }
 
     public void setFavoritedAt(LocalDateTime favoritedAt) {

@@ -1,14 +1,22 @@
 package com.example.music_app_project.controller;
 
-import com.example.music_app_project.model.Playlist;
-import com.example.music_app_project.repository.PlaylistRepository;
-import com.example.music_app_project.repository.UserRepository;
+import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.*;
+import com.example.music_app_project.model.Playlist;
+import com.example.music_app_project.repository.PlaylistRepository;
+import com.example.music_app_project.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/playlists")
@@ -37,7 +45,7 @@ public class PlaylistController {
     // Create a new playlist
     @PostMapping
     public ResponseEntity<Playlist> createPlaylist(@RequestBody Playlist playlist) {
-        if (playlist.getUser() == null || !userRepository.existsById(playlist.getUser().getUserID())) {
+        if (playlist.getUser() == null || !userRepository.existsById(playlist.getUser().getId())) {
             return ResponseEntity.badRequest().build();
         }
 
@@ -54,7 +62,7 @@ public class PlaylistController {
             return ResponseEntity.notFound().build();
         }
 
-        if (details.getUser() == null || !userRepository.existsById(details.getUser().getUserID())) {
+        if (details.getUser() == null || !userRepository.existsById(details.getUser().getId())) {
             return ResponseEntity.badRequest().build();
         }
 

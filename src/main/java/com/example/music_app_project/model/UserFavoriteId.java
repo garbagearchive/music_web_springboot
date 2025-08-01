@@ -4,51 +4,46 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public class UserFavoriteId implements Serializable {
+    private Integer user; // Phải khớp với tên thuộc tính 'user' trong UserFavorite
+    private Integer song; // Phải khớp với tên thuộc tính 'song' trong UserFavorite
 
-    private Integer userID;
-    private Integer songID;
+    // Constructors
+    public UserFavoriteId() {}
 
-    // ✅ Required: No-arg constructor
-    public UserFavoriteId() {
+    public UserFavoriteId(Integer user, Integer song) {
+        this.user = user;
+        this.song = song;
     }
 
-    // ✅ Optional: All-args constructor (useful for manual ID creation)
-    public UserFavoriteId(Integer userID, Integer songID) {
-        this.userID = userID;
-        this.songID = songID;
+    // Getters và Setters
+    public Integer getUser() {
+        return user;
     }
 
-    // Getters and setters
-    public Integer getUserID() {
-        return userID;
+    public void setUser(Integer user) {
+        this.user = user;
     }
 
-    public void setUserID(Integer userID) {
-        this.userID = userID;
+    public Integer getSong() {
+        return song;
     }
 
-    public Integer getSongID() {
-        return songID;
+    public void setSong(Integer song) {
+        this.song = song;
     }
 
-    public void setSongID(Integer songID) {
-        this.songID = songID;
-    }
-
-    // ✅ Required: equals() and hashCode()
+    // equals() và hashCode() là bắt buộc cho khóa phức hợp
     @Override
     public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (!(o instanceof UserFavoriteId))
-            return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         UserFavoriteId that = (UserFavoriteId) o;
-        return Objects.equals(userID, that.userID) &&
-                Objects.equals(songID, that.songID);
+        return Objects.equals(user, that.user) &&
+               Objects.equals(song, that.song);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(userID, songID);
+        return Objects.hash(user, song);
     }
 }
