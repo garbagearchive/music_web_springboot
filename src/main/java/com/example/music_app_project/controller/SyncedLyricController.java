@@ -12,6 +12,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/synced-lyrics")
+@CrossOrigin // Thêm dòng này để cho phép CORS
 public class SyncedLyricController {
 
     @Autowired

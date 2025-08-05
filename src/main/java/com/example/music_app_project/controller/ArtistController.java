@@ -12,6 +12,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/artists")
+@CrossOrigin // Thêm dòng này để cho phép CORS
 public class ArtistController {
 
     @Autowired

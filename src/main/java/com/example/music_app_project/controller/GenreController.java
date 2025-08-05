@@ -11,6 +11,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/genres")
+@CrossOrigin // Thêm dòng này để cho phép CORS
 public class GenreController {
 
     @Autowired
