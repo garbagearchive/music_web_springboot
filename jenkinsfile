@@ -11,14 +11,14 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building the project...'
-                bat './mvn spring-boot:run' 
+                bat 'mvn spring-boot:run' 
             }
         }
 
         stage('Test') {
             steps {
                 echo 'Running tests...'
-                bat './mvn test' 
+                bat 'mvn test' 
             }
         }
     }
