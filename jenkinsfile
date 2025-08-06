@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Clone') {
             steps {
-                git 'https://github.com/garbagearchive/music_web_springboot/'
+                git branch: 'main', url: 'https://github.com/garbagearchive/music_web_springboot/'
             }
         }
 
