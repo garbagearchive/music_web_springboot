@@ -12,6 +12,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/lyrics")
+@CrossOrigin // Thêm dòng này để cho phép CORS
 public class LyricController {
 
     @Autowired

@@ -33,72 +33,80 @@ public class Song {
 
     @Column(length = 255)
     private String audioFile;
+    
+    // Thêm constructor mặc định (không tham số) - bắt buộc cho Jackson
+    public Song() {
+    }
+
+    public Song(Album album, Artist artist, String audioFile, Integer duration, Genre genre, LocalDate releaseDate, Integer songID, String title) {
+        this.album = album;
+        this.artist = artist;
+        this.audioFile = audioFile;
+        this.duration = duration;
+        this.genre = genre;
+        this.releaseDate = releaseDate;
+        this.songID = songID;
+        this.title = title;
+    }
 
     // Getters and setters
-    // songID
     public Integer getSongID() {
-        return songID;
+     return songID;
     }
 
     public void setSongID(Integer songID) {
         this.songID = songID;
-    }
+}
 
-    // title
     public String getTitle() {
         return title;
     }
 
     public void setTitle(String title) {
         this.title = title;
-    }
+}
 
-    // artist
     public Artist getArtist() {
         return artist;
     }
 
     public void setArtist(Artist artist) {
         this.artist = artist;
-    }
+}
 
-    // album
     public Album getAlbum() {
         return album;
     }
 
     public void setAlbum(Album album) {
         this.album = album;
-    }
+     }
 
-    // gerne
     public Genre getGenre() {
         return genre;
     }
+    
+// ĐÃ SỬA: Tên phương thức được đổi từ setGerne thành setGenre
+    public void setGenre(Genre genre) {
+      this.genre = genre;
+}
 
-    public void setGerne(Genre gerne) {
-        this.genre = gerne;
-    }
-
-    // duration
     public Integer getDuration() {
         return duration;
     }
 
     public void setDuration(Integer duration) {
         this.duration = duration;
-    }
+}
 
-    // releaseDate
     public LocalDate getReleaseDate() {
         return releaseDate;
-    }
+}
 
     public void setReleaseDate(LocalDate releaseDate) {
         this.releaseDate = releaseDate;
-    }
+}
 
-    // audioFile
     public String getAudioFile() {
         return audioFile;
     }
@@ -106,5 +114,4 @@ public class Song {
     public void setAudioFile(String audioFile) {
         this.audioFile = audioFile;
     }
-
 }

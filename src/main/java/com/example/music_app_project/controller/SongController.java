@@ -2,15 +2,15 @@ package com.example.music_app_project.controller;
 
 import com.example.music_app_project.model.*;
 import com.example.music_app_project.repository.*;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/songs")
+@CrossOrigin(origins = "*")
 public class SongController {
 
     @Autowired
@@ -39,13 +39,12 @@ public class SongController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Create a new song
+    // Create a new song with an audio URL
     @PostMapping
     public ResponseEntity<Song> createSong(@RequestBody Song song) {
         if (!validateRelations(song)) {
             return ResponseEntity.badRequest().build();
         }
-
         Song savedSong = songRepository.save(song);
         return ResponseEntity.ok(savedSong);
     }
@@ -57,16 +56,14 @@ public class SongController {
         if (existingOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-
         if (!validateRelations(songDetails)) {
             return ResponseEntity.badRequest().build();
         }
-
         Song existingSong = existingOpt.get();
         existingSong.setTitle(songDetails.getTitle());
         existingSong.setArtist(songDetails.getArtist());
         existingSong.setAlbum(songDetails.getAlbum());
-        existingSong.setGerne(songDetails.getGenre()); // spelling matches your model
+        existingSong.setGenre(songDetails.getGenre());
         existingSong.setDuration(songDetails.getDuration());
         existingSong.setReleaseDate(songDetails.getReleaseDate());
         existingSong.setAudioFile(songDetails.getAudioFile());

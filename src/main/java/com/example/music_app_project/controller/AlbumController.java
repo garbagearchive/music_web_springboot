@@ -1,19 +1,28 @@
 package com.example.music_app_project.controller;
 
-import com.example.music_app_project.model.Album;
-import com.example.music_app_project.repository.AlbumRepository;
-import com.example.music_app_project.repository.ArtistRepository;
-import com.example.music_app_project.model.Artist;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.music_app_project.model.Album;
+import com.example.music_app_project.model.Artist;
+import com.example.music_app_project.repository.AlbumRepository;
+import com.example.music_app_project.repository.ArtistRepository;
+
 @RestController
 @RequestMapping("/api/albums")
+@CrossOrigin // Allow CORS for this controller
 public class AlbumController {
 
     @Autowired
