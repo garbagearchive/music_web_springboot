@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Skibidify - WC #1 Music To Relax</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div id="loginScreen" class="login-screen">
         <div class="login-card">
@@ -58,7 +60,7 @@
             <div class="playlist-section">
                 <h3>Playlists</h3>
                 <div id="playlistContainer">
-                    </div>
+                </div>
                 <div class="playlist-item create-new" onclick="createNewPlaylist()">+ Create Playlist</div>
             </div>
         </div>
@@ -91,19 +93,19 @@
                 <div id="search-section" class="content-section" style="display: none;">
                     <h2 class="section-title">Search Results</h2>
                     <div class="track-grid" id="searchResults">
-                        </div>
+                    </div>
                 </div>
 
                 <div id="library-section" class="content-section" style="display: none;">
                     <h2 class="section-title">Your Library</h2>
                     <div class="track-grid" id="libraryTracks">
-                        </div>
+                    </div>
                 </div>
 
                 <div id="favorites-section" class="content-section" style="display: none;">
                     <h2 class="section-title">Liked Songs</h2>
                     <div class="track-grid" id="favoriteTracks">
-                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -150,11 +152,12 @@
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             <div class="playlist-list" id="playlistList">
-                </div>
+            </div>
             <button class="create-playlist-btn" onclick="createNewPlaylistFromModal()">Create New Playlist</button>
         </div>
     </div>
 
-    <script src="js/api-service.js"></script>
+    <script src="api-service.js"></script>
 </body>
+
 </html>
