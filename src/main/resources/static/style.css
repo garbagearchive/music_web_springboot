@@ -704,3 +704,72 @@
         ::-webkit-scrollbar-thumb:hover {
             background: var(--border-color);
         }
+
+        /* Search bar improvements */
+.search-bar {
+    position: relative;
+}
+
+#clearSearchBtn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #fff;
+    padding: 0;
+}
+
+/* Filter buttons and dropdowns */
+.search-filters {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.filter-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.filter-btn {
+    background-color: #333;
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    background-color: #333;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    list-style: none;
+    padding: 5px 0;
+    margin: 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.dropdown-menu li {
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    display: block;
+    cursor: pointer;
+}
+
+.dropdown-menu li:hover {
+    background-color: #575757;
+}
+
+.filter-dropdown:hover .dropdown-menu {
+    display: block;
+}

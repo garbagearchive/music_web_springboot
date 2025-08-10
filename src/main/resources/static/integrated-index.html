@@ -74,9 +74,17 @@
                     </div>
                     <div class="search-bar">
                         <span>🔍</span>
-                        <input type="text" placeholder="Search for songs, artists, or albums" id="searchInput">
+                        <input type="text" placeholder="Search for songs (only songs)" id="searchInput">
+                        <button class="clear-search" id="clearSearchBtn" style="display: none;">&times;</button>
                     </div>
-                </div>
+                    <div class="search-filters">
+                    <div class="filter-dropdown" id="genreFilter">
+                    <button class="filter-btn">Genres ▼</button>
+                    <ul class="dropdown-menu" id="genreDropdown">
+                    </ul>
+                    </div>
+                    </div>
+                    </div>
                 <div class="header-right">
                     <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
                 </div>
