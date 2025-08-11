@@ -1,0 +1,120 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_IMAGE = 'music-app'
+        DOCKER_TAG = "${BUILD_NUMBER}"
+        CONTAINER_NAME = 'music-app-container'
+        APP_PORT = '9188'
+        HOST_PORT = '9188'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out code...'
+                checkout scm
+            }
+        }
+
+        stage('Build Application') {
+            steps {
+                echo 'Building the Spring Boot application...'
+                sh 'chmod +x mvnw'
+                sh './mvnw clean package -DskipTests'
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                echo 'Running tests...'
+                sh './mvnw test'
+            }
+            post {
+                always {
+                    publishTestResults testResultsPattern: 'target/surefire-reports/*.xml'
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker image...'
+                script {
+                    sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                    sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
+                }
+            }
+        }
+
+        stage('Stop Previous Container') {
+            steps {
+                script {
+                    sh '''
+                        if [ $(docker ps -q -f name=${CONTAINER_NAME}) ]; then
+                            echo 'Stopping existing container...'
+                            docker stop ${CONTAINER_NAME}
+                            docker rm ${CONTAINER_NAME}
+                        fi
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Application') {
+            steps {
+                echo 'Deploying application...'
+                script {
+                    sh '''
+                        docker run -d \
+                            --name ${CONTAINER_NAME} \
+                            -p ${HOST_PORT}:${APP_PORT} \
+                            -v $(pwd)/data:/app/data \
+                            --restart unless-stopped \
+                            ${DOCKER_IMAGE}:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                echo 'Performing health check...'
+                script {
+                    sh '''
+                        echo 'Waiting for application to start...'
+                        sleep 30
+                        
+                        for i in {1..10}; do
+                            if curl -f http://localhost:${HOST_PORT}/api/auth/test; then
+                                echo 'Application is healthy!'
+                                exit 0
+                            fi
+                            echo "Attempt $i failed, retrying in 10 seconds..."
+                            sleep 10
+                        done
+                        
+                        echo 'Health check failed'
+                        exit 1
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline completed'
+            sh 'docker image prune -f'
+        }
+        success {
+            echo 'Deployment successful!'
+            echo "Application is running on http://localhost:${HOST_PORT}"
+        }
+        failure {
+            echo 'Deployment failed!'
+            sh 'docker logs ${CONTAINER_NAME} || true'
+        }
+    }
+}
