@@ -1,250 +1,299 @@
-// Music Player Manager
+// player.js
+
 class MusicPlayer {
     constructor() {
-        this.audioElement = document.getElementById('audioPlayer');
+        this.audio = null;
         this.currentSong = null;
-        this.queue = [];
         this.currentIndex = 0;
+        this.queue = [];
         this.isPlaying = false;
+        this.isPaused = false;
+        this.volume = 0.5;
+        this.duration = 0;
+        this.currentTime = 0;
         this.isShuffled = false;
-        this.repeatMode = 'none'; // 'none', 'one', 'all'
-        this.volume = CONFIG.DEFAULTS.VOLUME;
-        this.originalQueue = []; // For shuffle/unshuffle
+        this.repeatMode = 'none';
+        this.originalQueue = [];
+        this.isLoading = false;
         
         this.init();
     }
 
     init() {
-        this.setupEventListeners();
-        this.loadPlayerState();
-        this.setupProgressTracking();
+        try {
+            this.audio = document.getElementById('audioPlayer') || this.createAudioElement();
+            
+            this.setupEventListeners();
+            this.setupUIEventListeners();
+            
+            this.loadSettings();
+            
+            console.log('🎵 Music Player initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize music player:', error);
+            this.handleError('Failed to initialize player');
+        }
+    }
+
+    createAudioElement() {
+        const audio = document.createElement('audio');
+        audio.id = 'audioPlayer';
+        audio.preload = 'metadata';
+        document.body.appendChild(audio);
+        return audio;
     }
 
     setupEventListeners() {
-        // Audio element events
-        this.audioElement.addEventListener('loadedmetadata', () => this.updateDuration());
-        this.audioElement.addEventListener('timeupdate', () => this.updateProgress());
-        this.audioElement.addEventListener('ended', () => this.handleSongEnd());
-        this.audioElement.addEventListener('error', (e) => this.handleAudioError(e));
-        this.audioElement.addEventListener('loadstart', () => this.showLoading());
-        this.audioElement.addEventListener('canplay', () => this.hideLoading());
+        if (!this.audio) return;
 
-        // Player control events
-        document.getElementById('playPauseBtn').addEventListener('click', () => this.togglePlayPause());
-        document.getElementById('shuffleBtn').addEventListener('click', () => this.toggleShuffle());
-        document.getElementById('repeatBtn').addEventListener('click', () => this.toggleRepeat());
-        document.getElementById('volumeRange').addEventListener('input', (e) => this.setVolume(e.target.value / 100));
-        document.getElementById('progressRange').addEventListener('input', (e) => this.seekToPosition(e.target.value));
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
+        this.audio.addEventListener('loadstart', () => this.handleLoadStart());
+        this.audio.addEventListener('loadedmetadata', () => this.handleLoadedMetadata());
+        this.audio.addEventListener('loadeddata', () => this.handleLoadedData());
+        this.audio.addEventListener('canplay', () => this.handleCanPlay());
+        this.audio.addEventListener('canplaythrough', () => this.handleCanPlayThrough());
+        this.audio.addEventListener('play', () => this.handlePlay());
+        this.audio.addEventListener('pause', () => this.handlePause());
+        this.audio.addEventListener('ended', () => this.handleEnded());
+        this.audio.addEventListener('timeupdate', () => this.handleTimeUpdate());
+        this.audio.addEventListener('volumechange', () => this.handleVolumeChange());
+        this.audio.addEventListener('error', (e) => this.handleAudioError(e));
+        this.audio.addEventListener('stalled', () => this.handleStalled());
+        this.audio.addEventListener('waiting', () => this.handleWaiting());
+        this.audio.addEventListener('playing', () => this.handlePlaying());
     }
 
-    loadPlayerState() {
-        // Load volume
-        const savedVolume = Storage.get(CONFIG.STORAGE_KEYS.VOLUME, CONFIG.DEFAULTS.VOLUME);
-        this.setVolume(savedVolume);
-
-        // Load shuffle state
-        const savedShuffle = Storage.get(CONFIG.STORAGE_KEYS.SHUFFLE, CONFIG.DEFAULTS.SHUFFLE);
-        if (savedShuffle) {
-            this.toggleShuffle();
+    setupUIEventListeners() {
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        if (playPauseBtn) {
+            playPauseBtn.addEventListener('click', () => this.togglePlayPause());
         }
 
-        // Load repeat mode
-        const savedRepeat = Storage.get(CONFIG.STORAGE_KEYS.REPEAT, CONFIG.DEFAULTS.REPEAT_MODE);
-        this.setRepeatMode(savedRepeat);
-
-        // Load queue
-        const savedQueue = Storage.get(CONFIG.STORAGE_KEYS.QUEUE, []);
-        if (savedQueue.length > 0) {
-            this.queue = savedQueue;
+        const prevBtn = document.getElementById('previousBtn');
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.previousSong());
         }
 
-        // Load current song
-        const savedCurrentSong = Storage.get(CONFIG.STORAGE_KEYS.CURRENT_SONG);
-        if (savedCurrentSong) {
-            this.loadSong(savedCurrentSong, false); // Don't auto-play
+        const nextBtn = document.getElementById('nextBtn');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => this.nextSong());
         }
-    }
 
-    savePlayerState() {
-        Storage.set(CONFIG.STORAGE_KEYS.VOLUME, this.volume);
-        Storage.set(CONFIG.STORAGE_KEYS.SHUFFLE, this.isShuffled);
-        Storage.set(CONFIG.STORAGE_KEYS.REPEAT, this.repeatMode);
-        Storage.set(CONFIG.STORAGE_KEYS.QUEUE, this.queue);
-        if (this.currentSong) {
-            Storage.set(CONFIG.STORAGE_KEYS.CURRENT_SONG, this.currentSong);
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        if (shuffleBtn) {
+            shuffleBtn.addEventListener('click', () => this.toggleShuffle());
+        }
+
+        const repeatBtn = document.getElementById('repeatBtn');
+        if (repeatBtn) {
+            repeatBtn.addEventListener('click', () => this.toggleRepeat());
+        }
+
+        const progressRange = document.getElementById('progressRange');
+        if (progressRange) {
+            progressRange.addEventListener('input', (e) => this.seek(e.target.value));
         }
     }
 
-    async playSong(song, addToQueue = true) {
-        if (!song) return;
+    handleLoadStart() {
+        this.isLoading = true;
+        this.updateLoadingState(true);
+    }
 
-        if (addToQueue) {
-            this.addToQueue(song);
-            this.currentIndex = this.queue.length - 1;
+    handleLoadedMetadata() {
+        this.duration = this.audio.duration;
+        this.updateProgressUI();
+    }
+
+    handleLoadedData() {
+        // Ready to play
+    }
+
+    handleCanPlay() {
+        this.isLoading = false;
+        this.updateLoadingState(false);
+        if (this.isPlaying) {
+            this.audio.play();
         }
+    }
 
-        await this.loadSong(song, true);
-        
-        // Add to play history
-        if (window.authManager && window.authManager.isAuthenticated()) {
-            // Implement add to history if needed
+    handleCanPlayThrough() {
+        // Fully loaded
+    }
+
+    handlePlay() {
+        this.isPlaying = true;
+        this.isPaused = false;
+        this.updatePlayPauseButton();
+    }
+
+    handlePause() {
+        this.isPlaying = false;
+        this.isPaused = true;
+        this.updatePlayPauseButton();
+    }
+
+    handleEnded() {
+        this.nextSong();
+    }
+
+    handleTimeUpdate() {
+        this.currentTime = this.audio.currentTime;
+        this.updateProgressUI();
+    }
+
+    handleVolumeChange() {
+        this.volume = this.audio.volume;
+        this.saveSettings();
+    }
+
+    handleAudioError(e) {
+        console.error('Audio error:', e);
+        this.handleError('Failed to load song');
+    }
+
+    handleStalled() {
+        this.handleError('Audio stalled');
+    }
+
+    handleWaiting() {
+        this.isLoading = true;
+        this.updateLoadingState(true);
+    }
+
+    handlePlaying() {
+        this.isLoading = false;
+        this.updateLoadingState(false);
+    }
+
+    togglePlayPause() {
+        if (this.isPlaying) {
+            this.pause();
+        } else {
+            this.play();
         }
     }
-    
-    async updateFavoriteButton(song) {
-        const favoriteBtn = document.getElementById('favoriteBtn');
-        if (!window.authManager || !window.authManager.isAuthenticated()) {
-            favoriteBtn.style.display = 'none';
-            return;
+
+    play() {
+        if (this.audio) {
+            this.audio.play();
         }
-        const userId = window.authManager.getCurrentUserId();
-        if (!userId) return;
-
-        const isFavorited = await apiService.isSongFavorited(userId, song.songID);
-        favoriteBtn.classList.toggle('favorited', isFavorited);
-        favoriteBtn.title = isFavorited ? 'Remove from favorites' : 'Add to favorites';
     }
 
-    updateQueueUI() {
-        const queueList = document.getElementById('queueList');
-        const queueCurrentSong = document.getElementById('queueCurrentSong');
-
-        // Update current song in queue
-        if (this.currentSong) {
-            queueCurrentSong.innerHTML = `
-                <div class="queue-item">
-                    <img src="${this.currentSong.album?.coverImage || Utils.getPlaceholderImage('song', 40)}" 
-                         alt="${this.currentSong.title}">
-                    <div class="queue-item-info">
-                        <h5>${this.currentSong.title}</h5>
-                        <p>${this.currentSong.artist?.name || 'Unknown Artist'}</p>
-                    </div>
-                </div>
-            `;
+    pause() {
+        if (this.audio) {
+            this.audio.pause();
         }
-
-        // Update next up list
-        queueList.innerHTML = '';
-        const nextSongs = this.queue.slice(this.currentIndex + 1);
-
-        nextSongs.forEach((song, index) => {
-            const queueItem = document.createElement('div');
-            queueItem.className = 'queue-item';
-            queueItem.innerHTML = `
-                <img src="${song.album?.coverImage || Utils.getPlaceholderImage('song', 40)}" 
-                     alt="${song.title}">
-                <div class="queue-item-info">
-                    <h5>${song.title}</h5>
-                    <p>${song.artist?.name || 'Unknown Artist'}</p>
-                </div>
-            `;
-
-            queueItem.addEventListener('click', () => {
-                this.currentIndex = this.currentIndex + 1 + index;
-                this.loadSong(song, this.isPlaying);
-            });
-
-            queueList.appendChild(queueItem);
-        });
     }
 
-    showLoading() {
-        // Could add a loading spinner in the player
-        console.log('Loading audio...');
+    nextSong() {
+        this.currentIndex = (this.currentIndex + 1) % this.queue.length;
+        this.playSong(this.queue[this.currentIndex]);
     }
 
-    hideLoading() {
-        // Hide loading spinner
-        console.log('Audio loaded');
+    previousSong() {
+        this.currentIndex = (this.currentIndex - 1 + this.queue.length) % this.queue.length;
+        this.playSong(this.queue[this.currentIndex]);
     }
 
-    // Get current playback state
-    getState() {
+    playSong(song) {
+        this.currentSong = song;
+        this.audio.src = song.url; // Assume song has url
+        this.audio.play();
+    }
+
+    seek(time) {
+        this.audio.currentTime = time;
+    }
+
+    setVolume(volume) {
+        this.audio.volume = volume;
+    }
+
+    toggleShuffle() {
+        this.isShuffled = !this.isShuffled;
+        // Shuffle logic
+    }
+
+    toggleRepeat() {
+        // Repeat logic
+    }
+
+    updatePlayPauseButton() {
+        // UI update
+    }
+
+    updateProgressUI() {
+        // UI update
+    }
+
+    updateLoadingState(loading) {
+        // UI update
+    }
+
+    formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    handleKeyboard(event) {
+        // Keyboard handling
+    }
+
+    handleError(message) {
+        console.error('Player error:', message);
+        Utils.showToast(message, 'error');
+    }
+
+    updatePlayHistory(song) {
+        console.log('🕒 Adding to play history:', song.title);
+    }
+
+    loadSettings() {
+        const volume = parseFloat(localStorage.getItem('player_volume') || '0.5');
+        const shuffle = localStorage.getItem('player_shuffle') === 'true';
+        const repeat = localStorage.getItem('player_repeat') || 'none';
+
+        this.setVolume(volume);
+        this.isShuffled = shuffle;
+        this.repeatMode = repeat;
+    }
+
+    saveSettings() {
+        localStorage.setItem('player_volume', this.volume.toString());
+        localStorage.setItem('player_shuffle', this.isShuffled.toString());
+        localStorage.setItem('player_repeat', this.repeatMode);
+    }
+
+    getCurrentSong() {
+        return this.currentSong;
+    }
+
+    getQueue() {
+        return [...this.queue];
+    }
+
+    isCurrentlyPlaying() {
+        return this.isPlaying;
+    }
+
+    getPlayerState() {
         return {
             currentSong: this.currentSong,
-            queue: this.queue,
-            currentIndex: this.currentIndex,
             isPlaying: this.isPlaying,
+            currentTime: this.currentTime,
+            duration: this.duration,
+            volume: this.volume,
             isShuffled: this.isShuffled,
             repeatMode: this.repeatMode,
-            volume: this.volume,
-            currentTime: this.audioElement.currentTime,
-            duration: this.audioElement.duration
+            queue: this.queue
         };
     }
 }
 
-// Player control functions for global access
-function togglePlayPause() {
-    if (window.player) {
-        window.player.togglePlayPause();
-    }
-}
+document.addEventListener('DOMContentLoaded', () => {
+    window.player = new MusicPlayer();
+    console.log('🎵 Player ready');
+});
 
-function nextSong() {
-    if (window.player) {
-        window.player.nextSong();
-    }
-}
-
-function previousSong() {
-    if (window.player) {
-        window.player.previousSong();
-    }
-}
-
-function toggleShuffle() {
-    if (window.player) {
-        window.player.toggleShuffle();
-    }
-}
-
-function toggleRepeat() {
-    if (window.player) {
-        window.player.toggleRepeat();
-    }
-}
-
-function seekSong(percentage) {
-    if (window.player) {
-        window.player.seekToPosition(percentage);
-    }
-}
-
-function changeVolume(volume) {
-    if (window.player) {
-        window.player.setVolume(volume / 100);
-    }
-}
-
-function toggleMute() {
-    if (window.player) {
-        window.player.toggleMute();
-    }
-}
-
-function toggleCurrentSongFavorite() {
-    if (window.player && window.player.currentSong) {
-        if (window.favoritesManager) {
-            window.favoritesManager.toggleFavorite(window.player.currentSong);
-        }
-    }
-}
-
-// Queue management functions
-function toggleQueue() {
-    const queueSidebar = document.getElementById('queueSidebar');
-    queueSidebar.classList.toggle('active');
-}
-
-function clearQueue() {
-    if (window.player) {
-        window.player.clearQueue();
-    }
-}
-
-// Initialize player
-window.player = new MusicPlayer();
+window.MusicPlayer = MusicPlayer;

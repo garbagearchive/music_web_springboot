@@ -1,4 +1,5 @@
-// Playlist Management
+// playlist.js
+
 class PlaylistManager {
     constructor() {
         this.userPlaylists = [];
@@ -11,7 +12,6 @@ class PlaylistManager {
     }
 
     setupEventListeners() {
-        // Modal close events
         const playlistModal = document.getElementById('playlistModal');
         if (playlistModal) {
             playlistModal.addEventListener('click', (e) => {
@@ -61,7 +61,6 @@ class PlaylistManager {
             return;
         }
 
-        // Add song counts to playlists
         const playlistsWithCounts = await Promise.all(
             this.userPlaylists.map(async (playlist) => {
                 try {
@@ -105,7 +104,6 @@ class PlaylistManager {
             const playlistSongs = await window.apiService.getSongsByPlaylist(playlist.playlistID);
             const songs = playlistSongs.map(ps => ps.song).filter(Boolean);
 
-            // Switch to library section and show playlist details
             if (window.uiManager) {
                 window.uiManager.showSection('library');
             }
@@ -148,7 +146,7 @@ class PlaylistManager {
 
             const songsList = document.getElementById('playlistSongsList');
             if (window.uiManager) {
-                window.uiManager.renderSongsList(songsList, songs);
+                window.uiManager.renderMusicGrid(songsList, songs, 'song');
             }
 
         } catch (error) {
@@ -186,4 +184,12 @@ class PlaylistManager {
             Utils.showToast('Error creating playlist', 'error');
         }
     }
+
+    closePlaylistModal() {
+        // Implementation
+    }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.playlistManager = new PlaylistManager();
+});

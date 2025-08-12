@@ -1,4 +1,5 @@
-// Search functionality
+// search.js
+
 class SearchManager {
     constructor() {
         this.searchResults = [];
@@ -7,60 +8,170 @@ class SearchManager {
             genre: '',
             artist: ''
         };
+
+        this._debounceDelay = CONFIG.UI.DEBOUNCE_DELAY || 300;
+
+        this.init = this.init.bind(this);
+        this.setupSearchListeners = this.setupSearchListeners.bind(this);
+        this.performSearch = this.performSearch.bind(this);
+        this.focusSearchInput = this.focusSearchInput.bind(this);
+        this.clearSearchResults = this.clearSearchResults.bind(this);
+        this.toggleSearchView = this.toggleSearchView.bind(this);
+        this.clearSearch = this.clearSearch.bind(this);
+        this.toggleSearchResultFavorite = this.toggleSearchResultFavorite.bind(this);
+
         this.init();
     }
 
     init() {
         this.setupSearchListeners();
-        this.debouncedSearch = Utils.debounce(() => this.performSearch(), CONFIG.UI.DEBOUNCE_DELAY);
-    }
-}
 
-// Global search functions
-function performSearch() {
-    if (window.searchManager) {
-        window.searchManager.debouncedSearch();
+        this.debouncedSearch = Utils.debounce(this.performSearch.bind(this), this._debounceDelay);
     }
-}
 
-function applyFilters() {
-    if (window.searchManager) {
-        window.searchManager.performSearch();
+    setupSearchListeners() {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.searchFilters.searchTerm = e.target.value.trim();
+                this.debouncedSearch();
+            });
+        }
+
+        const genreSelect = document.getElementById('genreFilter');
+        if (genreSelect) {
+            genreSelect.addEventListener('change', (e) => {
+                this.searchFilters.genre = e.target.value;
+                this.performSearch();
+            });
+        }
+
+        const artistSelect = document.getElementById('artistFilter');
+        if (artistSelect) {
+            artistSelect.addEventListener('change', (e) => {
+                this.searchFilters.artist = e.target.value;
+                this.performSearch();
+            });
+        }
+
+        const form = document.getElementById('searchForm');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.performSearch();
+            });
+        }
     }
-}
 
-function toggleSearchView(viewType) {
-    if (window.searchManager) {
-        window.searchManager.toggleSearchView(viewType);
+    async performSearch() {
+        const searchResultsEl = document.getElementById('searchResults');
+        if (!searchResultsEl) return;
+
+        const hasFilters = this.searchFilters.searchTerm || this.searchFilters.genre || this.searchFilters.artist;
+        if (!hasFilters) {
+            searchResultsEl.innerHTML = this.getSearchPrompt();
+            return;
+        }
+
+        searchResultsEl.innerHTML = '<p>Searching...</p>';
+
+        try {
+            let results = [];
+            if (window.apiService && window.apiService.getSongs) {
+                results = await window.apiService.getSongs(this.searchFilters);
+            } else {
+                results = await this.mockSearch(this.searchFilters);
+            }
+
+            this.searchResults = Array.isArray(results) ? results : [];
+            this.displaySearchResults(this.searchResults);
+        } catch (error) {
+            console.error('Search error:', error);
+            searchResultsEl.innerHTML = '<p>Error performing search. Please try again.</p>';
+        }
     }
-}
 
-function clearSearch() {
-    if (window.searchManager) {
-        window.searchManager.clearSearch();
+    async mockSearch(filters) {
+        return new Promise(resolve => {
+            setTimeout(() => {
+                resolve([
+                    { id: 1, title: 'Song 1', artist: { name: 'Artist 1' } },
+                    { id: 2, title: 'Song 2', artist: { name: 'Artist 2' } }
+                ]);
+            }, 500);
+        });
     }
-}
 
-function toggleSearchResultFavorite(songId) {
-    // Find the song in search results and toggle favorite
-    if (window.searchManager && window.favoritesManager) {
-        const song = window.searchManager.searchResults.find(s => s.songID === songId);
-        if (song) {
-            window.favoritesManager.toggleFavorite(song);
+    displaySearchResults(results) {
+        const searchResultsEl = document.getElementById('searchResults');
+        if (!searchResultsEl) return;
+
+        searchResultsEl.innerHTML = '';
+
+        if (results.length === 0) {
+            searchResultsEl.innerHTML = '<p>No results found</p>';
+            return;
+        }
+
+        const list = document.createElement('div');
+        results.forEach(result => {
+            const item = document.createElement('div');
+            item.textContent = result.title;
+            list.appendChild(item);
+        });
+
+        searchResultsEl.appendChild(list);
+    }
+
+    getSearchPrompt() {
+        return `
+            <div class="search-prompt">
+                <i class="fas fa-search"></i>
+                <h3>Search for music</h3>
+                <p>Find your favorite songs, artists, and albums</p>
+            </div>
+        `;
+    }
+
+    focusSearchInput() {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) searchInput.focus();
+    }
+
+    clearSearchResults() {
+        this.searchResults = [];
+        const searchResultsEl = document.getElementById('searchResults');
+        if (searchResultsEl) {
+            searchResultsEl.innerHTML = this.getSearchPrompt();
+        }
+    }
+
+    clearSearch() {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) searchInput.value = '';
+        const genreSelect = document.getElementById('genreFilter');
+        if (genreSelect) genreSelect.value = '';
+        const artistSelect = document.getElementById('artistFilter');
+        if (artistSelect) artistSelect.value = '';
+
+        this.searchFilters = { searchTerm: '', genre: '', artist: '' };
+        this.clearSearchResults();
+    }
+
+    toggleSearchView(viewType) {
+        const searchResultsEl = document.getElementById('searchResults');
+        if (!searchResultsEl) return;
+        searchResultsEl.classList.toggle('view-grid', viewType === 'grid');
+        searchResultsEl.classList.toggle('view-list', viewType === 'list');
+    }
+
+    async toggleSearchResultFavorite(songId, songObj = null) {
+        const song = songObj || (this.searchResults.find(s => (s.songID || s.id) == songId));
+        if (!song) return;
+        if (window.favoritesManager) {
+            await window.favoritesManager.toggleFavorite(song.id);
         }
     }
 }
 
-function showSearchResultMenu(event, songId) {
-    // Show context menu for search result
-    event.preventDefault();
-    if (window.searchManager && window.uiManager) {
-        const song = window.searchManager.searchResults.find(s => s.songID === songId);
-        if (song) {
-            window.uiManager.showContextMenu(event, song, 'song');
-        }
-    }
-}
-
-// Initialize search manager
 window.searchManager = new SearchManager();

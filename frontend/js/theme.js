@@ -1,4 +1,5 @@
-// Theme Manager
+// theme.js
+
 class ThemeManager {
     constructor() {
         this.themes = {
@@ -28,62 +29,23 @@ class ThemeManager {
                     accent: '#1ed760'
                 }
             },
-            midnight: {
-                name: 'Midnight',
-                icon: '🌚',
-                colors: {
-                    primary: '#bb86fc',
-                    secondary: '#0a0a0a',
-                    background: '#000000',
-                    surface: '#1a1a1a',
-                    text: '#ffffff',
-                    textSecondary: '#aaaaaa',
-                    accent: '#cf6679'
-                }
-            },
-            ocean: {
-                name: 'Ocean',
-                icon: '🌊',
-                colors: {
-                    primary: '#00bcd4',
-                    secondary: '#0d47a1',
-                    background: '#0a1929',
-                    surface: '#132f4c',
-                    text: '#ffffff',
-                    textSecondary: '#90caf9',
-                    accent: '#29b6f6'
-                }
-            },
-            sunset: {
-                name: 'Sunset',
-                icon: '🌅',
-                colors: {
-                    primary: '#ff6b35',
-                    secondary: '#2d1b69',
-                    background: '#1a0b3d',
-                    surface: '#2d1b69',
-                    text: '#ffffff',
-                    textSecondary: '#ffab91',
-                    accent: '#ff8a65'
-                }
-            },
-            forest: {
-                name: 'Forest',
-                icon: '🌲',
-                colors: {
-                    primary: '#4caf50',
-                    secondary: '#1b5e20',
-                    background: '#0d1b0f',
-                    surface: '#1b5e20',
-                    text: '#ffffff',
-                    textSecondary: '#a5d6a7',
-                    accent: '#66bb6a'
-                }
-            }
         };
 
         this.currentTheme = 'dark';
         this.customThemes = new Map();
+        this.storageKey = 'selectedTheme';
+        this.init = this.init.bind(this);
+        this.loadSavedTheme = this.loadSavedTheme.bind(this);
+        this.setTheme = this.setTheme.bind(this);
+        this.applyTheme = this.applyTheme.bind(this);
+        this.setupEventListeners = this.setupEventListeners.bind(this);
+        this.toggleTheme = this.toggleTheme.bind(this);
+        this.createThemeSelector = this.createThemeSelector.bind(this);
+        this.addCustomTheme = this.addCustomTheme.bind(this);
+        this.showThemeNotification = this.showThemeNotification.bind(this);
+        this.showError = this.showError.bind(this);
+        this.dispatchThemeEvent = this.dispatchThemeEvent.bind(this);
+
         this.init();
     }
 
@@ -91,31 +53,106 @@ class ThemeManager {
         this.loadSavedTheme();
         this.setupEventListeners();
         this.createThemeSelector();
-        console.log('🎨 Theme Manager initialized');
+        console.log('🎨 Theme Manager initialized (current:', this.currentTheme + ')');
     }
 
     loadSavedTheme() {
-        const savedTheme = localStorage.getItem('selectedTheme');
-        if (savedTheme && this.themes[savedTheme]) {
-            this.setTheme(savedTheme);
-        } else {
-            this.setTheme('dark'); // Default theme
+        try {
+            const saved = localStorage.getItem(this.storageKey);
+            if (saved && (this.themes[saved] || this.customThemes.has(saved))) {
+                this.setTheme(saved, { notify: false });
+            } else {
+                this.setTheme(this.currentTheme, { notify: false });
+            }
+        } catch (e) {
+            this.setTheme(this.currentTheme, { notify: false });
         }
     }
 
+    setTheme(themeName, opts = { notify: true }) {
+        const theme = this.themes[themeName] || this.customThemes.get(themeName);
+        if (!theme) {
+            this.showError(`Theme "${themeName}" not found`);
+            return;
+        }
+
+        this.currentTheme = themeName;
+        this.applyTheme(theme.colors);
+
+        document.documentElement.setAttribute('data-theme', themeName);
+
+        localStorage.setItem(this.storageKey, themeName);
+
+        if (opts.notify) {
+            this.dispatchThemeEvent('theme:changed', { theme: themeName, colors: theme.colors });
+            this.showThemeNotification(themeName);
+        }
+    }
+
+    applyTheme(colors) {
+        const root = document.documentElement;
+        Object.keys(colors).forEach(key => {
+            root.style.setProperty(`--${key}`, colors[key]);
+        });
+    }
+
     setupEventListeners() {
-        // Theme toggle button
-        document.addEventListener('click', (e) => {
-            if (e.target.matches('#theme-toggle') || e.target.closest('#theme-toggle')) {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 't' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) {
                 this.toggleTheme();
             }
         });
     }
 
+    toggleTheme() {
+        const keys = Object.keys(this.themes).concat(Array.from(this.customThemes.keys()));
+        const idx = keys.indexOf(this.currentTheme);
+        const next = keys[(idx + 1) % keys.length];
+        this.setTheme(next);
+    }
+
+    createThemeSelector(containerId = 'themeSelectorContainer') {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        const fragment = document.createDocumentFragment();
+        Object.entries(this.themes).forEach(([key, t]) => {
+            const btn = document.createElement('button');
+            btn.className = 'theme-btn';
+            btn.dataset.theme = key;
+            btn.title = t.name;
+            btn.innerHTML = `<span class="theme-icon">${t.icon || ''}</span><span class="theme-name">${t.name}</span>`;
+            btn.addEventListener('click', () => this.setTheme(key));
+            fragment.appendChild(btn);
+        });
+
+        this.customThemes.forEach((t, key) => {
+            const btn = document.createElement('button');
+            btn.className = 'theme-btn custom';
+            btn.dataset.theme = key;
+            btn.title = t.name;
+            btn.innerHTML = `<span class="theme-icon">${t.icon || ''}</span><span class="theme-name">${t.name}</span>`;
+            btn.addEventListener('click', () => this.setTheme(key));
+            fragment.appendChild(btn);
+        });
+
+        container.appendChild(fragment);
+    }
+
+    addCustomTheme(key, themeObj) {
+        if (!key || !themeObj || !themeObj.colors) {
+            this.showError('Invalid custom theme');
+            return;
+        }
+        this.customThemes.set(key, themeObj);
+        this.createThemeSelector();
+    }
+
     showThemeNotification(themeName, customMessage = null) {
-        const theme = this.themes[themeName] || this.customThemes.get(themeName);
-        const message = customMessage || `Switched to ${theme.name} theme`;
-        
+        const t = this.themes[themeName] || this.customThemes.get(themeName);
+        const message = customMessage || (t ? `Switched to ${t.name} theme` : `Switched theme to ${themeName}`);
         Utils.showToast(message, 'info');
     }
 
@@ -124,15 +161,11 @@ class ThemeManager {
     }
 
     dispatchThemeEvent(eventType, data) {
-        const event = new CustomEvent(eventType, {
-            detail: data,
-            bubbles: true
-        });
+        const event = new CustomEvent(eventType, { detail: data, bubbles: true });
         document.dispatchEvent(event);
     }
 }
 
-// Initialize theme manager
 document.addEventListener('DOMContentLoaded', () => {
     window.themeManager = new ThemeManager();
 });

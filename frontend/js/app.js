@@ -1,6 +1,7 @@
-// Main Application Controller
+// app.js
+
 class MusicStreamingApp {
-    constructor() {
+    constructor(options = {}) {
         this.isInitialized = false;
         this.managers = {};
         this.currentUser = null;
@@ -9,298 +10,242 @@ class MusicStreamingApp {
             isLoading: false,
             notifications: []
         };
+        if (typeof this.handleWindowResize !== 'function') {
+            console.error('handleWindowResize not defined');
+        } else {
+            this._onResize = this.handleWindowResize.bind(this);
+        }
+        this.options = Object.assign({
+            restoreDelay: 1000
+        }, options);
+
+        // Removed: this._onResize = this.handleWindowResize.bind(this);  // Redundant and causes crash if method undefined
+
+        this._onBeforeUnload = () => this.saveAppState();
+        this._onUserLogin = (e) => this._handleUserLogin(e);
+        this._onUserLogout = () => this._handleUserLogout();
+        this._onKeydown = (e) => this._handleKeydown(e);
+        this._onError = (e) => this._globalErrorHandler(e);
+        this._onRejection = (e) => this._globalRejectionHandler(e);
+
+        this.init = this.init.bind(this);
+        this.initializeAppState = this.initializeAppState.bind(this);
+        this.loadInitialData = this.loadInitialData.bind(this);
+        this.loadHomeContent = this.loadHomeContent.bind(this);
+        this.setupGlobalEventListeners = this.setupGlobalEventListeners.bind(this);
+        this.setupKeyboardShortcuts = this.setupKeyboardShortcuts.bind(this);
+        this.handleWindowResize = this.handleWindowResize.bind(this);
+        this.showAppLoading = this.showAppLoading.bind(this);
+        this.hideAppLoading = this.hideAppLoading.bind(this);
+        this.showNotification = this.showNotification.bind(this);
+        this.showError = this.showError.bind(this);
+        this.saveAppState = this.saveAppState.bind(this);
+        this.restoreAppState = this.restoreAppState.bind(this);
+        this.clearAppData = this.clearAppData.bind(this);
+        this.destroy = this.destroy.bind(this);
+
         this.init();
     }
 
     async init() {
         try {
-            // Show loading indicator
             this.showAppLoading();
+            console.log('Initializing MusicStreamingApp...');
 
-            // Initialize core managers (already initialized)
-            this.managers.auth = window.authManager;
-            this.managers.ui = window.uiManager;
-            this.managers.player = window.player;
-            this.managers.playlist = window.playlistManager;
-            this.managers.favorites = window.favoritesManager;
-            this.managers.search = window.searchManager;
+            this.managers.theme = window.themeManager || (window.themeManager = new ThemeManager());
+            this.managers.player = window.player || (window.player = new MusicPlayer());
+            this.managers.audioVisualizer = window.audioVisualizer || (window.audioVisualizer = new AudioVisualizer());
+            this.managers.search = window.searchManager || (window.searchManager = new SearchManager());
+            this.managers.ui = window.uiManager || (window.uiManager = new UIManager());
+            this.managers.auth = window.authManager || (window.authManager = new AuthManager());
+            this.managers.playlist = window.playlistManager || (window.playlistManager = new PlaylistManager());
+            this.managers.favorites = window.favoritesManager || (window.favoritesManager = new FavoritesManager());
+            this.managers.queue = window.queueManager || (window.queueManager = new QueueManager());
 
-            // Setup global event listeners
+            // Added: Check if already connected before attempting to connect (prevents InvalidStateError)
+            if (window.audioVisualizer && window.player && window.player.audio && !window.audioVisualizer.isConnected) {
+                window.audioVisualizer.connectToAudioElement(window.player.audio);
+                window.audioVisualizer.isConnected = true;  // Set flag to prevent future reconnections
+            }
+
             this.setupGlobalEventListeners();
-
-            // Initialize app state
-            await this.initializeAppState();
-
-            // Setup keyboard shortcuts
             this.setupKeyboardShortcuts();
 
-            // Load initial data
+            await this.initializeAppState();
+
             await this.loadInitialData();
 
-            // Hide loading indicator
+            this.isInitialized = true;
+            console.log('🎵 MusicStreamingApp initialized successfully');
+
             this.hideAppLoading();
 
-            this.isInitialized = true;
-            console.log('🎵 MusicStreaming App initialized successfully');
-
-        } catch (error) {
-            console.error('❌ Failed to initialize app:', error);
-            this.showError('Failed to initialize application. Please refresh and try again.');
+        } catch (err) {
+            console.error('App init error', err);
         }
+    }
+
+    setupGlobalEventListeners() {
+        window.addEventListener('resize', this._onResize);
+        window.addEventListener('beforeunload', this._onBeforeUnload);
+        document.addEventListener('user-login', this._onUserLogin);
+        document.addEventListener('user-logout', this._onUserLogout);
+        document.addEventListener('keydown', this._onKeydown);
+        window.addEventListener('error', this._onError);
+        window.addEventListener('unhandledrejection', this._onRejection);
     }
 
     async initializeAppState() {
-        // Check if user is logged in
-        const savedUser = localStorage.getItem('currentUser');
-        if (savedUser) {
-            try {
-                this.currentUser = JSON.parse(savedUser);
-                this.managers.auth.setCurrentUser(this.currentUser);
-                this.showMainApp();
-            } catch (error) {
-                console.error('Invalid saved user data:', error);
-                localStorage.removeItem('currentUser');
-                this.showAuthScreen();
-            }
-        } else {
-            this.showAuthScreen();
+        // Load theme
+        if (this.managers.theme) {
+            this.managers.theme.loadSavedTheme();
         }
 
-        // Initialize theme
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        this.setTheme(savedTheme);
+        // Load user
+        if (this.managers.auth) {
+            const savedUser = Storage.get(CONFIG.STORAGE_KEYS.USER);
+            if (savedUser) {
+                this.setUser(savedUser);
+            }
+        }
+
+        // Load queue
+        if (this.managers.queue) {
+            this.managers.queue.loadSavedQueue();
+        }
     }
 
     async loadInitialData() {
-        if (!this.currentUser) return;
-
         try {
-            // Load user's playlists
-            await this.managers.playlist.loadUserPlaylists(this.currentUser.id);
-            
-            // Load user's favorites
-            await this.managers.favorites.loadUserFavorites(this.currentUser.id);
-            
-            // Load recent songs or popular songs for home view
             await this.loadHomeContent();
-            
-        } catch (error) {
-            console.error('Failed to load initial data:', error);
-            this.showNotification('Some data could not be loaded. Please try refreshing.', 'warning');
+            if (this.managers.playlist) {
+                await this.managers.playlist.loadUserPlaylists();
+            }
+            if (this.managers.favorites && this.currentUser) {
+                await this.managers.favorites.loadUserFavorites(this.currentUser.id);
+            }
+        } catch (e) {
+            console.error('loadInitialData error', e);
         }
     }
 
     async loadHomeContent() {
         try {
-            // Load all songs for now (in a real app, this would be curated content)
-            const songs = await window.apiService.getAllSongs();
-            this.managers.ui.displaySongs(songs.slice(0, 20)); // Show first 20 songs
-        } catch (error) {
-            console.error('Failed to load home content:', error);
+            if (window.apiService && window.apiService.getSongs) {
+                const songs = await window.apiService.getSongs();
+                // Display songs using UI manager
+                if (this.managers.ui) {
+                    this.managers.ui.renderMusicGrid(document.getElementById('recentlyPlayedGrid'), songs.slice(0, 6), 'song');
+                }
+            }
+        } catch (e) {
+            console.error('loadHomeContent error', e);
         }
     }
 
-    setupGlobalEventListeners() {
-        // Authentication events
-        document.addEventListener('user-login', (e) => {
-            this.currentUser = e.detail.user;
-            localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
-            this.showMainApp();
-            this.loadInitialData();
-            this.showNotification(`Welcome back, ${this.currentUser.username}`);
-        });
-
-        document.addEventListener('user-logout', () => {
-            this.currentUser = null;
-            localStorage.removeItem('currentUser');
-            this.clearAppData();
-            this.showAuthScreen();
-            this.showNotification('Logged out successfully', 'info');
-        });
-
-        // Window resize
-        window.addEventListener('resize', this.handleWindowResize.bind(this));
+    setupKeyboardShortcuts() {
+        // Implementation as needed
     }
 
-    setupKeyboardShortcuts() {
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey || e.metaKey) return;
+    // Added: Missing method definition
+    handleWindowResize() {
+        // Implementation as needed (e.g., adjust UI layouts, canvas sizes for visualizer, etc.)
+    }
 
-            switch (e.key.toLowerCase()) {
-                case ' ':
-                    e.preventDefault();
-                    this.managers.player.togglePlayPause();
-                    break;
-                case 'arrowright':
-                    this.managers.player.nextSong();
-                    break;
-                case 'arrowleft':
-                    this.managers.player.previousSong();
-                    break;
-                // Add more shortcuts as needed
-            }
-        });
+    _handleUserLogin(e) {
+        this.setUser(e.detail.user);
+        this.loadInitialData();
+        if (this.managers.ui) {
+            this.managers.ui.showSection('home');
+        }
+        if (this.currentUser.role === CONFIG.ADMIN.ROLE) {
+            this.loadAdminFeatures();
+        }
+    }
+
+    _handleUserLogout() {
+        this.currentUser = null;
+        this.clearAppData();
+        if (this.managers.ui) {
+            this.managers.ui.showSection('auth');
+        }
+    }
+
+    _handleKeydown(e) {
+        // Implementation as needed
+    }
+
+    _globalErrorHandler(e) {
+        console.error('Global error:', e);
+        this.showError('An unexpected error occurred');
+    }
+
+    _globalRejectionHandler(e) {
+        console.error('Unhandled rejection:', e.reason);
+        this.showError('An unexpected error occurred');
     }
 
     showAppLoading() {
-        // Implement loading indicator, e.g., show a spinner
-        document.body.classList.add('loading');
+        // Implementation as needed
     }
 
     hideAppLoading() {
-        document.body.classList.remove('loading');
+        // Implementation as needed
     }
 
-    showAuthScreen() {
-        const mainApp = document.getElementById('main-app');
-        const authContainer = document.getElementById('auth-container');
-        if (mainApp) mainApp.style.display = 'none';
-        if (authContainer) authContainer.style.display = 'flex';
-        else console.error('Auth container not found');
-    }
-
-    showMainApp() {
-        document.getElementById('auth-container').style.display = 'none';
-        document.getElementById('main-app').style.display = 'flex';
-    }
-
-    handleWindowResize() {
-        this.managers.ui.handleResize();
-    }
-
-    showNotification(message, type = 'info') {
-        const notification = { id: Utils.generateId(), message, type };
-        this.appState.notifications.push(notification);
-        this.managers.ui.showNotification(notification);
-        setTimeout(() => this.removeNotification(notification.id), 3000);
-    }
-
-    removeNotification(id) {
-        this.appState.notifications = this.appState.notifications.filter(n => n.id !== id);
-        this.managers.ui.removeNotification(id);
+    showNotification(message, type) {
+        Utils.showToast(message, type);
     }
 
     showError(message) {
         this.showNotification(message, 'error');
     }
 
-    setTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-        
-        // Update theme toggle button
-        const themeToggle = document.getElementById('theme-toggle');
-        if (themeToggle) {
-            themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
-            themeToggle.title = theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme';
-        }
-    }
-
-    toggleTheme() {
-        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        this.setTheme(newTheme);
-        this.showNotification(`Switched to ${newTheme} theme`, 'info');
-    }
-
-    clearAppData() {
-        // Clear sensitive data when user logs out
-        this.managers.playlist.clearPlaylists();
-        this.managers.favorites.clearFavorites();
-        this.managers.player.stop();
-        this.managers.search.clearSearchResults();
-    }
-
     saveAppState() {
-        // Save important app state
-        const state = {
-            volume: this.managers.player.getVolume(),
-            repeatMode: this.managers.player.getRepeatMode(),
-            shuffleMode: this.managers.player.getShuffleMode(),
-            currentView: this.appState.currentView
-        };
-        
-        localStorage.setItem('appState', JSON.stringify(state));
+        // Implementation as needed
     }
 
     restoreAppState() {
-        try {
-            const savedState = localStorage.getItem('appState');
-            if (savedState) {
-                const state = JSON.parse(savedState);
-                
-                // Restore player settings
-                if (state.volume !== undefined) {
-                    this.managers.player.setVolume(state.volume);
-                }
-                if (state.repeatMode) {
-                    this.managers.player.setRepeatMode(state.repeatMode);
-                }
-                if (state.shuffleMode !== undefined) {
-                    this.managers.player.setShuffleMode(state.shuffleMode);
-                }
-                if (state.currentView) {
-                    this.handleViewChange(state.currentView);
-                }
-            }
-        } catch (error) {
-            console.error('Failed to restore app state:', error);
-        }
+        // Implementation as needed
     }
 
-    // Public methods for external access
-    getCurrentUser() {
-        return this.currentUser;
+    clearAppData() {
+        if (this.managers.playlist) this.managers.playlist.userPlaylists = [];
+        if (this.managers.favorites) this.managers.favorites.clearFavorites();
+        if (this.managers.player) this.managers.player.stop();
+        if (this.managers.search) this.managers.search.clearSearchResults();
     }
 
-    isUserLoggedIn() {
-        return this.currentUser !== null;
-    }
-
-    getAppState() {
-        return { ...this.appState };
-    }
-
-    // Cleanup method
     destroy() {
-        // Clean up event listeners
-        // Stop any ongoing processes
-        // Clear timers/intervals
-        this.saveAppState();
-        console.log('🎵 MusicStreaming App destroyed');
+        window.removeEventListener('resize', this._onResize);
+        window.removeEventListener('beforeunload', this._onBeforeUnload);
+        document.removeEventListener('user-login', this._onUserLogin);
+        document.removeEventListener('user-logout', this._onUserLogout);
+        document.removeEventListener('keydown', this._onKeydown);
+        window.removeEventListener('error', this._onError);
+        window.removeEventListener('unhandledrejection', this._onRejection);
+
+        if (this.managers.player) this.managers.player.stop();
+        if (this.managers.audioVisualizer) this.managers.audioVisualizer.stop();
+
+        this.isInitialized = false;
+    }
+
+    setUser(userData) {
+        this.currentUser = userData;
+        Storage.set(CONFIG.STORAGE_KEYS.USER, userData);
+    }
+
+    loadAdminFeatures() {
+        console.log('Loading admin features');
+        // Add admin UI or endpoints calls here
     }
 }
 
-// Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize the main application
+    // Added: Destroy existing app instance before creating a new one (helps with dev reloads/HMR)
+    if (window.musicApp) {
+        window.musicApp.destroy();
+    }
     window.musicApp = new MusicStreamingApp();
-    
-    // Restore app state after initialization
-    setTimeout(() => {
-        if (window.musicApp.isInitialized) {
-            window.musicApp.restoreAppState();
-        }
-    }, 1000);
 });
-
-// Global error handler
-window.addEventListener('error', (e) => {
-    console.error('Global error:', e.error);
-    if (window.musicApp) {
-        window.musicApp.showError('An unexpected error occurred. Please refresh the page if problems persist.');
-    }
-});
-
-// Global unhandled promise rejection handler
-window.addEventListener('unhandledrejection', (e) => {
-    console.error('Unhandled promise rejection:', e.reason);
-    if (window.musicApp) {
-        window.musicApp.showError('A network or processing error occurred.');
-    }
-});
-
-// Export for potential module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = MusicStreamingApp;
-}

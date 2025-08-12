@@ -1,10 +1,10 @@
-// API Service for handling all backend communications
+// api.js
+
 class ApiService {
     constructor() {
         this.baseURL = CONFIG.API_BASE_URL;
     }
 
-    // Generic request method
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
         const defaultOptions = {
@@ -17,11 +17,10 @@ class ApiService {
 
         try {
             const response = await fetch(url, config);
-            
-            // Handle different response types
+
             const contentType = response.headers.get('content-type');
             let data;
-            
+
             if (contentType && contentType.includes('application/json')) {
                 data = await response.json();
             } else {
@@ -39,7 +38,6 @@ class ApiService {
         }
     }
 
-    // Songs API
     async getSongs(filters = {}) {
         let endpoint = CONFIG.ENDPOINTS.SONGS;
         const params = new URLSearchParams();
@@ -85,7 +83,6 @@ class ApiService {
         });
     }
 
-    // Artists API
     async getArtists() {
         return this.request(CONFIG.ENDPOINTS.ARTISTS);
     }
@@ -114,7 +111,6 @@ class ApiService {
         });
     }
 
-    // Albums API
     async getAlbums() {
         return this.request(CONFIG.ENDPOINTS.ALBUMS);
     }
@@ -123,8 +119,73 @@ class ApiService {
         return this.request(`${CONFIG.ENDPOINTS.ALBUMS}/${id}`);
     }
 
+    async getFavorites() {
+        return this.request(CONFIG.ENDPOINTS.FAVORITES || '/favorites');
+    }
 
-    // Helper method to check if a song is in favorites
+    async getFavoritesByUser(userId) {
+        return this.request(`${CONFIG.ENDPOINTS.FAVORITES || '/favorites'}/user/${userId}`);
+    }
+
+    async addToFavorites(userId, songId) {
+        return this.request(CONFIG.ENDPOINTS.FAVORITES || '/favorites', {
+            method: 'POST',
+            body: JSON.stringify({ userId, songId })
+        });
+    }
+
+    async addFavorite(favoriteData) {
+        return this.request(CONFIG.ENDPOINTS.FAVORITES || '/favorites', {
+            method: 'POST',
+            body: JSON.stringify(favoriteData)
+        });
+    }
+
+    async removeFromFavorites(userId, songId) {
+        return this.request(`${CONFIG.ENDPOINTS.FAVORITES || '/favorites'}/${userId}/${songId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    async removeFromFavoritesWithBody(userId, songId) {
+        return this.request(CONFIG.ENDPOINTS.FAVORITES || '/favorites', {
+            method: 'DELETE',
+            body: JSON.stringify({ userId, songId })
+        });
+    }
+
+    async getPlaylists() {
+        return this.request(CONFIG.ENDPOINTS.PLAYLISTS || '/playlists');
+    }
+
+    async getPlaylist(id) {
+        return this.request(`${CONFIG.ENDPOINTS.PLAYLISTS || '/playlists'}/${id}`);
+    }
+
+    async getSongsByPlaylist(playlistId) {
+        return this.request(`${CONFIG.ENDPOINTS.PLAYLISTS || '/playlists'}/${playlistId}/songs`);
+    }
+
+    async createPlaylist(playlistData) {
+        return this.request(CONFIG.ENDPOINTS.PLAYLISTS || '/playlists', {
+            method: 'POST',
+            body: JSON.stringify(playlistData)
+        });
+    }
+
+    async updatePlaylist(id, playlistData) {
+        return this.request(`${CONFIG.ENDPOINTS.PLAYLISTS || '/playlists'}/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(playlistData)
+        });
+    }
+
+    async deletePlaylist(id) {
+        return this.request(`${CONFIG.ENDPOINTS.PLAYLISTS || '/playlists'}/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
     async isSongFavorited(userId, songId) {
         if (!userId || isNaN(userId)) {
             console.error('Invalid userId for isSongFavorited');
@@ -139,12 +200,10 @@ class ApiService {
         }
     }
 
-    // Alias for consistency
     getUserFavorites(userId) {
         return this.getFavoritesByUser(userId);
     }
 
-    // Helper method to get song count for a playlist
     async getPlaylistSongCount(playlistId) {
         try {
             const songs = await this.getSongsByPlaylist(playlistId);
@@ -156,5 +215,4 @@ class ApiService {
     }
 }
 
-// Create and export API service instance
 window.apiService = new ApiService();

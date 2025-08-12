@@ -1,4 +1,5 @@
-// Authentication Manager
+// auth.js
+
 class AuthManager {
     constructor() {
         this.currentUser = null;
@@ -6,7 +7,6 @@ class AuthManager {
     }
 
     init() {
-        // Load saved user if any
         const savedUser = Storage.get(CONFIG.STORAGE_KEYS.USER);
         if (savedUser) {
             this.currentUser = savedUser;
@@ -15,7 +15,6 @@ class AuthManager {
     }
 
     setupEventListeners() {
-        // Login form submit (assume #loginForm exists in index.html)
         const loginForm = document.getElementById('loginForm');
         if (loginForm) {
             loginForm.addEventListener('submit', async (e) => {
@@ -26,7 +25,6 @@ class AuthManager {
             });
         }
 
-        // Register form submit
         const registerForm = document.getElementById('registerForm');
         if (registerForm) {
             registerForm.addEventListener('submit', async (e) => {
@@ -38,7 +36,6 @@ class AuthManager {
             });
         }
 
-        // Logout button
         document.addEventListener('click', (e) => {
             if (e.target.matches('#logoutBtn')) {
                 this.logout();
@@ -75,7 +72,7 @@ class AuthManager {
             Utils.showToast('Registration failed: ' + error.message, 'error');
         }
     }
-
+    
     logout() {
         this.currentUser = null;
         Storage.remove(CONFIG.STORAGE_KEYS.USER);
@@ -91,17 +88,46 @@ class AuthManager {
         return !!this.currentUser;
     }
 
+    isAdmin() {
+        return this.currentUser?.role === 'admin';
+    }
+
     setCurrentUser(user) {
         this.currentUser = user;
     }
 
-    // Add if needed for playlist edit permissions
     canEditPlaylist(playlist) {
-        return this.currentUser && playlist.user.id === this.currentUser.id;
+        return this.currentUser && (playlist.user.id === this.currentUser.id || this.isAdmin());
     }
 }
 
-// Initialize auth manager
+function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tabs .tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+
+    document.querySelector(`.tab[onclick*="${tab}"]`).classList.add('active');
+    document.getElementById(`${tab}Form`).classList.add('active');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     window.authManager = new AuthManager();
 });
+
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = input.nextElementSibling;
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+function handleForgotPassword() {
+    // Implement forgot password logic here (e.g., show modal or API call)
+    Utils.showToast('Forgot password functionality coming soon!', 'info');
+}

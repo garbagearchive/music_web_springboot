@@ -1,8 +1,8 @@
-// Configuration file for the music streaming app
+// config.js
+
 const CONFIG = {
-    API_BASE_URL: 'http://localhost:9188/api',
-    
-    // Local Storage Keys
+    API_BASE_URL: 'http://127.0.0.1:9188/api',
+
     STORAGE_KEYS: {
         USER: 'music_app_user',
         THEME: 'music_app_theme',
@@ -13,16 +13,14 @@ const CONFIG = {
         REPEAT: 'music_app_repeat',
         FAVORITES: 'music_app_favorites'
     },
-    
-    // Default values
+
     DEFAULTS: {
         VOLUME: 0.5,
         THEME: 'dark',
-        REPEAT_MODE: 'none', // 'none', 'one', 'all'
+        REPEAT_MODE: 'none',
         SHUFFLE: false
     },
-    
-    // API Endpoints
+
     ENDPOINTS: {
         AUTH: {
             LOGIN: '/auth/login',
@@ -35,30 +33,47 @@ const CONFIG = {
         GENRES: '/genres',
         PLAYLISTS: '/playlists',
         PLAYLIST_SONGS: '/playlist-songs',
+        FAVORITES: '/favorites',
         USER_FAVORITES: '/user-favorites',
         PLAY_HISTORY: '/play-history',
         LYRICS: '/lyrics',
         SYNCED_LYRICS: '/synced-lyrics',
-        USERS: '/users'
+        USERS: '/users',
+        ADMIN: {
+            USERS: '/admin/users',
+            STATS: '/admin/stats',
+            LOGS: '/admin/logs'
+        }
     },
-    
-    // UI Constants
+
     UI: {
         DEBOUNCE_DELAY: 300,
         ANIMATION_DURATION: 300,
         TOAST_DURATION: 3000,
         SEARCH_MIN_LENGTH: 1
     },
-    
-    // Audio Settings
+
     AUDIO: {
         CROSSFADE_DURATION: 3000,
-        SEEK_STEP: 10, // seconds
+        SEEK_STEP: 10,
         VOLUME_STEP: 0.1
+    },
+
+    CORS: {
+        ALLOWED_ORIGINS: [
+            'http://127.0.0.1:5500',
+            'http://localhost:5500',
+            'http://127.0.0.1:3000',
+            'http://localhost:3000'
+        ]
+    },
+
+    ADMIN: {
+        ROLE: 'admin',
+        FEATURES: ['manage_users', 'view_stats', 'edit_content']
     }
 };
 
-// Helper functions for localStorage with error handling
 const Storage = {
     get(key, defaultValue = null) {
         try {
@@ -69,9 +84,13 @@ const Storage = {
             return defaultValue;
         }
     },
-    
+
     set(key, value) {
         try {
+            if (value === undefined) {
+                this.remove(key); // Avoid storing undefined
+                return true;
+            }
             localStorage.setItem(key, JSON.stringify(value));
             return true;
         } catch (error) {
@@ -79,7 +98,7 @@ const Storage = {
             return false;
         }
     },
-    
+
     remove(key) {
         try {
             localStorage.removeItem(key);
@@ -89,7 +108,7 @@ const Storage = {
             return false;
         }
     },
-    
+
     clear() {
         try {
             localStorage.clear();
@@ -101,6 +120,21 @@ const Storage = {
     }
 };
 
-// Export for use in other files
+const checkCORS = async () => {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/health`, {
+            method: 'GET',
+            mode: 'cors'
+        });
+        console.log('✅ CORS is working properly');
+        return true;
+    } catch (error) {
+        console.error('❌ CORS Error:', error.message);
+        console.log('💡 Make sure your backend server allows requests from:', window.location.origin);
+        return false;
+    }
+};
+
 window.CONFIG = CONFIG;
 window.Storage = Storage;
+window.checkCORS = checkCORS;
